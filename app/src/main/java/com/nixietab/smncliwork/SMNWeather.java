@@ -3,12 +3,16 @@ package com.nixietab.smncliwork;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import org.json.*;
 
-
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 
 public class SMNWeather {
@@ -59,8 +63,9 @@ public class SMNWeather {
     }
 
     private static JSONArray fetchWeatherData() throws IOException, JSONException {
+        handleSSLHandshake(); // Blasphemy
         URL url = new URL(API_BASE);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
         conn.setRequestMethod("GET");
@@ -78,5 +83,28 @@ public class SMNWeather {
     private static String capitalize(String str) {
         if (str == null || str.isEmpty()) return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+    public static void handleSSLHandshake() { // Please don't ever do this
+        try { // All faith is lost
+            TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+
+                @Override
+                public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                }
+            }};
+
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+            HttpsURLConnection.setDefaultHostnameVerifier((arg0, arg1) -> true);
+        } catch (Exception ignored) { // And there's how security doesn't work anymore C:
+        }
     }
 }
